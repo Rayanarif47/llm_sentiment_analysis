@@ -46,7 +46,7 @@ def extract_emojis(tweet_text):
     return ''.join(char for char in tweet_text if emoji.is_emoji(char))
 
 def get_user_tweets(username):
-    """Fetch tweets for a specific user from the database"""
+    """Fetch tweet for a specific user from the database"""
     connection = get_db_connection()
     if not connection:
         return None
@@ -59,13 +59,13 @@ def get_user_tweets(username):
             SELECT id, tweet_text, sentiment, tweet_date, query 
             FROM tweets 
             WHERE LOWER(username) = %s
-            ORDER BY tweet_date DESC
+            LIMIT 1
         """, (username,))
         
-        tweets = cursor.fetchall()
-        return tweets
+        tweet = cursor.fetchone()
+        return tweet
     except Exception as e:
-        st.error(f"Error fetching tweets: {e}")
+        st.error(f"Error fetching tweet: {e}")
         return None
     finally:
         if cursor:
@@ -193,51 +193,48 @@ if username:
     # Update session state
     st.session_state.current_username = username
     
-    # Fetch tweets
-    tweets = get_user_tweets(username)
+    # Fetch tweet for the specific username
+    tweet = get_user_tweets(username)
     
-    if tweets:
-        # Display all tweets
-        st.subheader(f"Tweets for @{username}")
+    if tweet:
+        # Display the tweet for the specific username
+        st.subheader(f"Tweet for @{username}")
         
-        for tweet in tweets:
-            # Create a container for each tweet
-            tweet_container = st.container()
-            with tweet_container:
-                st.markdown("---")  # Add a separator between tweets
-                st.text(f"Tweet ID: {tweet[0]}")
-                st.text(f"Original Text: {tweet[1]}")
-                st.text(f"Processed Text: {preprocess_tweet(tweet[1])}")
-                st.text(f"Emojis: {extract_emojis(tweet[1]) if extract_emojis(tweet[1]) else 'None'}")
-                st.text(f"Sentiment: {'Positive' if tweet[2] == 1 else 'Negative'}")
-                st.text(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-                
-                # Create columns for buttons
-                col1, col2 = st.columns(2)
-                
-                # Analyze sentiment button
-                with col1:
-                    if st.button("Analyze Sentiment", key=f"analyze_{tweet[0]}"):
-                        analysis = analyze_sentiment(tweet)
-                        st.markdown("### Sentiment Analysis")
-                        st.write(analysis)
-                
-                # Convert negative to positive button
-                with col2:
-                    if st.button("Convert Negative to Positive", key=f"convert_{tweet[0]}"):
-                        result = convert_negative_to_positive(tweet)
-                        st.write(result)
-                        
-                        # Refresh tweets after conversion
-                        tweets = get_user_tweets(username)
-                        st.markdown("### Updated Tweet")
-                        updated_tweet = next((t for t in tweets if t[0] == tweet[0]), None)
-                        if updated_tweet:
-                            st.text(f"Tweet ID: {updated_tweet[0]}")
-                            st.text(f"Original Text: {updated_tweet[1]}")
-                            st.text(f"Processed Text: {preprocess_tweet(updated_tweet[1])}")
-                            st.text(f"Emojis: {extract_emojis(updated_tweet[1]) if extract_emojis(updated_tweet[1]) else 'None'}")
-                            st.text(f"Sentiment: {'Positive' if updated_tweet[2] == 1 else 'Negative'}")
-                            st.text(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        # Create a container for the tweet
+        tweet_container = st.container()
+        with tweet_container:
+            st.markdown("---")  # Add a separator
+            st.text(f"Tweet ID: {tweet[0]}")
+            st.text(f"Original Text: {tweet[1]}")
+            st.text(f"Processed Text: {preprocess_tweet(tweet[1])}")
+            st.text(f"Emojis: {extract_emojis(tweet[1]) if extract_emojis(tweet[1]) else 'None'}")
+            st.text(f"Sentiment: {'Positive' if tweet[2] == 1 else 'Negative'}")
+            st.text(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            
+            # Create columns for buttons
+            col1, col2 = st.columns(2)
+            
+            # Analyze sentiment button
+            with col1:
+                if st.button("Analyze Sentiment", key=f"analyze_{tweet[0]}"):
+                    analysis = analyze_sentiment(tweet)
+                    st.markdown("### Sentiment Analysis")
+                    st.write(analysis)
+            
+            # Convert negative to positive button
+            with col2:
+                if st.button("Convert Negative to Positive", key=f"convert_{tweet[0]}"):
+                    result = convert_negative_to_positive(tweet)
+                    st.write(result)
+                    
+                    # Refresh tweet after conversion
+                    tweet = get_user_tweets(username)
+                    st.markdown("### Updated Tweet")
+                    st.text(f"Tweet ID: {tweet[0]}")
+                    st.text(f"Original Text: {tweet[1]}")
+                    st.text(f"Processed Text: {preprocess_tweet(tweet[1])}")
+                    st.text(f"Emojis: {extract_emojis(tweet[1]) if extract_emojis(tweet[1]) else 'None'}")
+                    st.text(f"Sentiment: {'Positive' if tweet[2] == 1 else 'Negative'}")
+                    st.text(f"Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     else:
-        st.error(f"No tweets found for username: {username}") 
+        st.error(f"No tweet found for username: {username}") 
